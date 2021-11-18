@@ -4,7 +4,7 @@
  * File Created: Wednesday, 17th November 2021 10:37:15 am
  * Author: Ananda Yudhistira (anandabayu12@gmail.com)
  * -----
- * Last Modified: Thursday, 18th November 2021 11:34:46 am
+ * Last Modified: Thursday, 18th November 2021 12:02:03 pm
  * Modified By: Ananda Yudhistira (anandabayu12@gmail.com>)
  * -----
  * Copyright 2021 Ananda Yudhistira, -
@@ -12,7 +12,36 @@
 const db = require('../config/database');
 const Employee = require('../model/employee.model');
 
-const Op = db.Sequelize.Op;
+const excludes = ['createdAt', 'updatedAt', 'managerId'];
+const includes = (tree = false) => {
+  return [
+    {
+      model: Employee,
+      as: 'manager',
+      attributes: {
+        exclude: ['createdAt', 'updatedAt', 'managerId'],
+      },
+    },
+    {
+      model: Employee,
+      as: 'directReports',
+      attributes: {
+        exclude: ['createdAt', 'updatedAt', 'managerId'],
+      },
+      include: tree
+        ? [
+            {
+              model: Employee,
+              as: 'directReports',
+              attributes: {
+                exclude: ['createdAt', 'updatedAt', 'managerId'],
+              },
+            },
+          ]
+        : [],
+    },
+  ];
+};
 
 exports.create = async (req, res) => {
   const { name, status, managerId } = req.body;
@@ -38,24 +67,9 @@ exports.findAll = async (req, res) => {
     let employees = await Employee.findAll({
       order: [['employeeId', 'asc']],
       attributes: {
-        exclude: ['createdAt', 'updatedAt', 'managerId'],
+        exclude: excludes,
       },
-      include: [
-        {
-          model: Employee,
-          as: 'manager',
-          attributes: {
-            exclude: ['createdAt', 'updatedAt', 'managerId'],
-          },
-        },
-        {
-          model: Employee,
-          as: 'directReports',
-          attributes: {
-            exclude: ['createdAt', 'updatedAt', 'managerId'],
-          },
-        },
-      ],
+      include: includes(false),
     });
     return res.json(employees);
   } catch (e) {
@@ -137,35 +151,9 @@ exports.delete = async (req, res) => {
 const getDetailUser = (userId, tree = false) => {
   return Employee.findByPk(userId, {
     attributes: {
-      exclude: ['createdAt', 'updatedAt', 'managerId'],
+      exclude: excludes,
     },
 
-    include: [
-      {
-        model: Employee,
-        as: 'manager',
-        attributes: {
-          exclude: ['createdAt', 'updatedAt', 'managerId'],
-        },
-      },
-      {
-        model: Employee,
-        as: 'directReports',
-        attributes: {
-          exclude: ['createdAt', 'updatedAt', 'managerId'],
-        },
-        include: tree
-          ? [
-              {
-                model: Employee,
-                as: 'directReports',
-                attributes: {
-                  exclude: ['createdAt', 'updatedAt', 'managerId'],
-                },
-              },
-            ]
-          : [],
-      },
-    ],
+    include: includes(tree),
   });
 };
